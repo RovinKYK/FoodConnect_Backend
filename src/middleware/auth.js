@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const config = require('../../config/config.json');
+const env = process.env.NODE_ENV || 'development';
 
 const authenticateToken = async (req, res, next) => {
   try {
@@ -15,7 +17,7 @@ const authenticateToken = async (req, res, next) => {
     let decoded;
     try {
       // Placeholder: In real implementation, verify with Choreo
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      decoded = jwt.verify(token, config[env].JWT_SECRET || 'your-secret-key');
     } catch (error) {
       return res.status(403).json({ error: 'Invalid token' });
     }

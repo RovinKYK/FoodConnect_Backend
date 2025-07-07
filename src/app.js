@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { sequelize } = require('./models');
+const config = require('../config/config.json');
+const env = process.env.NODE_ENV || 'development';
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -33,7 +35,7 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
     error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    message: env === 'development' ? err.message : 'Internal server error'
   });
 });
 
@@ -42,7 +44,7 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-const PORT = process.env.PORT || 5001;
+const PORT = config[env].PORT || 5001;
 
 // Database connection and server start
 const startServer = async () => {
@@ -51,7 +53,7 @@ const startServer = async () => {
     console.log('Database connection established successfully.');
     
     // Sync database (in development)
-    if (process.env.NODE_ENV === 'development') {
+    if (env === 'development') {
       await sequelize.sync({ alter: true });
       console.log('Database synced.');
     }
