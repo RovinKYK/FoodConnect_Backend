@@ -1,0 +1,1132 @@
+openapi: 3.0.3
+info:
+  title: FoodConnect API
+  description: API for FoodConnect - a food sharing platform connecting donors with recipients
+  version: 1.0.0
+  contact:
+    name: FoodConnect Team
+servers:
+  - url: http://localhost:5001
+    description: Development server
+  - url: https://api.foodconnect.com
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login/signup endpoints
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+        choreo_user_id:
+          type: string
+          description: Choreo user ID for authentication
+        first_name:
+          type: string
+          description: User's first name
+        last_name:
+          type: string
+          description: User's last name
+        address:
+          type: string
+          description: User's address
+        phone_number:
+          type: string
+          description: User's phone number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - choreo_user_id
+        - first_name
+        - last_name
+        - address
+        - phone_number
+
+    FoodItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique food item identifier
+        donor_id:
+          type: string
+          format: uuid
+          description: ID of the user who donated the food
+        food_type:
+          type: string
+          description: Type of food (e.g., "Pizza", "Bread", "Vegetables")
+        quantity_available:
+          type: number
+          format: float
+          description: Available quantity of the food item
+        quantity_unit:
+          type: string
+          enum: [count, grams]
+          description: Unit of measurement for quantity
+        prepared_date:
+          type: string
+          format: date
+          description: Date when the food was prepared
+        prepared_time:
+          type: string
+          pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+          description: Time when the food was prepared (HH:MM format)
+        description:
+          type: string
+          description: Additional description of the food item
+        image_url:
+          type: string
+          format: uri
+          description: URL to the food item image
+        donor:
+          $ref: '#/components/schemas/User'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - donor_id
+        - food_type
+        - quantity_available
+        - quantity_unit
+        - prepared_date
+        - prepared_time
+
+    FoodRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique food request identifier
+        food_item_id:
+          type: string
+          format: uuid
+          description: ID of the requested food item
+        requester_id:
+          type: string
+          format: uuid
+          description: ID of the user making the request
+        requested_amount:
+          type: number
+          format: float
+          description: Amount of food requested
+        request_date:
+          type: string
+          format: date-time
+          description: Date and time of the request
+        status:
+          type: string
+          enum: [pending, accepted, completed, cancelled]
+          description: Current status of the request
+        requester:
+          $ref: '#/components/schemas/User'
+        foodItem:
+          $ref: '#/components/schemas/FoodItem'
+      required:
+        - id
+        - food_item_id
+        - requester_id
+        - requested_amount
+        - status
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique notification identifier
+        recipient_user_id:
+          type: string
+          format: uuid
+          description: ID of the user receiving the notification
+        sender_user_id:
+          type: string
+          format: uuid
+          description: ID of the user sending the notification
+        food_item_id:
+          type: string
+          format: uuid
+          description: ID of the related food item
+        requested_amount:
+          type: number
+          format: float
+          description: Amount requested in the notification
+        message:
+          type: string
+          description: Notification message
+        is_read:
+          type: boolean
+          description: Whether the notification has been read
+        sender:
+          $ref: '#/components/schemas/User'
+        foodItem:
+          $ref: '#/components/schemas/FoodItem'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - recipient_user_id
+        - sender_user_id
+        - food_item_id
+        - requested_amount
+        - message
+        - is_read
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+          description: Validation error details
+
+    LoginRequest:
+      type: object
+      properties:
+        choreo_user_id:
+          type: string
+          description: Choreo user ID for authentication
+        email:
+          type: string
+          format: email
+          description: User's email address
+      required:
+        - choreo_user_id
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Success message
+        token:
+          type: string
+          description: JWT authentication token
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            first_name:
+              type: string
+            last_name:
+              type: string
+            email:
+              type: string
+            requiresProfile:
+              type: boolean
+              description: Whether the user needs to complete their profile
+
+    SignupRequest:
+      type: object
+      properties:
+        choreo_user_id:
+          type: string
+          description: Choreo user ID for authentication
+        email:
+          type: string
+          format: email
+          description: User's email address
+      required:
+        - choreo_user_id
+
+    SignupResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Success message
+        token:
+          type: string
+          description: JWT authentication token
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            requiresProfile:
+              type: boolean
+              description: Whether the user needs to complete their profile
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          description: User's first name
+        last_name:
+          type: string
+          description: User's last name
+        address:
+          type: string
+          description: User's address
+        phone_number:
+          type: string
+          pattern: '^\d+$'
+          description: User's phone number (numbers only)
+      required:
+        - first_name
+        - last_name
+        - address
+        - phone_number
+
+    FoodItemCreateRequest:
+      type: object
+      properties:
+        food_type:
+          type: string
+          description: Type of food
+        quantity_available:
+          type: number
+          format: float
+          minimum: 0.01
+          description: Available quantity
+        quantity_unit:
+          type: string
+          enum: [count, grams]
+          description: Unit of measurement
+        prepared_date:
+          type: string
+          format: date
+          description: Date when food was prepared
+        prepared_time:
+          type: string
+          pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+          description: Time when food was prepared (HH:MM)
+        description:
+          type: string
+          description: Additional description
+        image_url:
+          type: string
+          format: uri
+          description: URL to food image
+      required:
+        - food_type
+        - quantity_available
+        - quantity_unit
+        - prepared_date
+        - prepared_time
+
+    FoodRequestCreateRequest:
+      type: object
+      properties:
+        requested_amount:
+          type: number
+          format: float
+          minimum: 0.01
+          description: Amount of food requested
+      required:
+        - requested_amount
+
+    UploadResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Success message
+        image_url:
+          type: string
+          format: uri
+          description: URL of uploaded image
+        filename:
+          type: string
+          description: Original filename
+        size:
+          type: integer
+          description: File size in bytes
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Check if the API is running
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  message:
+                    type: string
+                    example: "FoodConnect API is running"
+
+  /api/auth/login:
+    post:
+      summary: User login
+      description: Authenticate user with Choreo user ID
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad request - missing choreo_user_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  requiresProfile:
+                    type: boolean
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/signup:
+    post:
+      summary: User signup
+      description: Create a new user account with Choreo user ID
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Signup successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupResponse'
+        '400':
+          description: Bad request - missing choreo_user_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/user:
+    get:
+      summary: Get current user details
+      description: Retrieve current user information using JWT token
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      address:
+                        type: string
+                      phone_number:
+                        type: string
+                      requiresProfile:
+                        type: boolean
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/user/profile:
+    get:
+      summary: Get user profile
+      description: Retrieve the authenticated user's profile information
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Update user profile
+      description: Create or update the authenticated user's profile information
+      tags:
+        - User
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/food:
+    get:
+      summary: Get all food items
+      description: Retrieve all available food items with optional search and filtering
+      tags:
+        - Food
+      parameters:
+        - name: search
+          in: query
+          description: Search term for food type
+          required: false
+          schema:
+            type: string
+        - name: town
+          in: query
+          description: Filter by town in donor's address
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Food items retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  food_items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FoodItem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create food item
+      description: Add a new food item for donation
+      tags:
+        - Food
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodItemCreateRequest'
+      responses:
+        '201':
+          description: Food item created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  food_item:
+                    $ref: '#/components/schemas/FoodItem'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/food/myfoods:
+    get:
+      summary: Get user's donated food items
+      description: Retrieve all food items donated by the authenticated user
+      tags:
+        - Food
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User's food items retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  food_items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FoodItem'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/food/{id}:
+    get:
+      summary: Get food item details
+      description: Retrieve detailed information about a specific food item
+      tags:
+        - Food
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Food item ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Food item details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  food_item:
+                    $ref: '#/components/schemas/FoodItem'
+        '404':
+          description: Food item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update food item
+      description: Update an existing food item (only by the donor)
+      tags:
+        - Food
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Food item ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodItemCreateRequest'
+      responses:
+        '200':
+          description: Food item updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  food_item:
+                    $ref: '#/components/schemas/FoodItem'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the donor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Food item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete food item
+      description: Delete a food item (only by the donor)
+      tags:
+        - Food
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Food item ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Food item deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the donor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Food item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/food/{id}/request:
+    post:
+      summary: Request food item
+      description: Create a request for a specific food item
+      tags:
+        - Food
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Food item ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodRequestCreateRequest'
+      responses:
+        '200':
+          description: Food request created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  food_request:
+                    $ref: '#/components/schemas/FoodRequest'
+                  updated_quantity:
+                    type: number
+                    format: float
+        '400':
+          description: Validation error or invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Food item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/notifications:
+    get:
+      summary: Get user notifications
+      description: Retrieve all notifications for the authenticated user
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/notifications/{id}/read:
+    put:
+      summary: Mark notification as read
+      description: Mark a specific notification as read
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Notification ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  notification:
+                    $ref: '#/components/schemas/Notification'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the recipient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/notifications/read-all:
+    put:
+      summary: Mark all notifications as read
+      description: Mark all unread notifications for the authenticated user as read
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/notifications/unread-count:
+    get:
+      summary: Get unread notification count
+      description: Get the count of unread notifications for the authenticated user
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Unread count retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread_count:
+                    type: integer
+                    description: Number of unread notifications
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/upload/image:
+    post:
+      summary: Upload image
+      description: Upload an image file to Firebase Storage
+      tags:
+        - Upload
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file to upload (max 5MB)
+      responses:
+        '200':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Bad request - no file or invalid file type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization endpoints
+  - name: User
+    description: User profile management endpoints
+  - name: Food
+    description: Food item management and requests
+  - name: Notifications
+    description: Notification management endpoints
+  - name: Upload
+    description: File upload endpoints 

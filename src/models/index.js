@@ -7,11 +7,6 @@ const env = process.env.NODE_ENV || 'development';
 const config = configJson[env];
 const db = {};
 
-console.log("config.json:",configJson);
-console.log("config:",config);
-console.log("env:",env);
-console.log("configjsontype:",typeof configJson);
-
 let sequelize;
 sequelize = new Sequelize(config.database, config.username, config.password, config);
 
