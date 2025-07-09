@@ -2,35 +2,43 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { User } = require('../models');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const config = require('../../config/config.json');
 const env = process.env.NODE_ENV || 'development';
 
 const router = express.Router();
 
-// POST /api/auth/login - Handle Choreo login callback
-router.post('/login', async (req, res) => {
+// POST /api/auth/login - Handle email/password login
+router.post('/login', [
+  body('email').isEmail().withMessage('Please enter a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
   try {
-    const { choreo_user_id, email } = req.body;
-
-    if (!choreo_user_id) {
-      return res.status(400).json({ error: 'Choreo user ID is required' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    // Find existing user
+    const { email, password } = req.body;
+
+    // Find existing user by email
     let user = await User.findOne({
-      where: { choreo_user_id }
+      where: { email }
     });
 
     if (!user) {
-      return res.status(404).json({ 
-        error: 'User not found',
-        requiresProfile: true 
-      });
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { choreo_user_id: user.choreo_user_id },
+      { userId: user.id, email: user.email },
       config[env].JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
@@ -42,7 +50,7 @@ router.post('/login', async (req, res) => {
         id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
-        email
+        email: user.email
       }
     });
   } catch (error) {
@@ -51,36 +59,50 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/signup - Handle Choreo signup callback
-router.post('/signup', async (req, res) => {
+// POST /api/auth/signup - Handle email/password signup
+router.post('/signup', [
+  body('name').isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
+  body('email').isEmail().withMessage('Please enter a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
   try {
-    const { choreo_user_id, email } = req.body;
-
-    if (!choreo_user_id) {
-      return res.status(400).json({ error: 'Choreo user ID is required' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: errors.array()[0].msg });
     }
+
+    const { name, email, password } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({
-      where: { choreo_user_id }
+      where: { email }
     });
 
     if (existingUser) {
-      return res.status(409).json({ error: 'User already exists' });
+      return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Create user record (profile will be completed later)
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Split name into first and last name
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Create user record
     const user = await User.create({
-      choreo_user_id,
-      first_name: '', // Will be filled in profile completion
-      last_name: '', // Will be filled in profile completion
+      email,
+      password: hashedPassword,
+      first_name: firstName,
+      last_name: lastName,
       address: '', // Will be filled in profile completion
       phone_number: '' // Will be filled in profile completion
     });
 
     // Generate JWT token
     const token = jwt.sign(
-      { choreo_user_id: user.choreo_user_id },
+      { userId: user.id, email: user.email },
       config[env].JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
@@ -90,7 +112,9 @@ router.post('/signup', async (req, res) => {
       token,
       user: {
         id: user.id,
-        requiresProfile: true
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email
       }
     });
   } catch (error) {
@@ -111,9 +135,7 @@ router.get('/user', async (req, res) => {
 
     const decoded = jwt.verify(token, config[env].JWT_SECRET || 'your-secret-key');
     
-    const user = await User.findOne({
-      where: { choreo_user_id: decoded.choreo_user_id }
-    });
+    const user = await User.findByPk(decoded.userId);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -124,9 +146,10 @@ router.get('/user', async (req, res) => {
         id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
+        email: user.email,
         address: user.address,
         phone_number: user.phone_number,
-        requiresProfile: !user.first_name || !user.last_name || !user.address || !user.phone_number
+        requiresProfile: !user.address || !user.phone_number
       }
     });
   } catch (error) {

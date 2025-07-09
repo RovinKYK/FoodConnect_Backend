@@ -22,10 +22,8 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Invalid token' });
     }
 
-    // Find user by choreo_user_id
-    const user = await User.findOne({
-      where: { choreo_user_id: decoded.choreo_user_id }
-    });
+    // Find user by userId (from JWT token)
+    const user = await User.findByPk(decoded.userId);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

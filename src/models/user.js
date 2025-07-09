@@ -19,8 +19,20 @@ module.exports = (sequelize, DataTypes) => {
     },
     choreo_user_id: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true
+      }
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false
     },
     first_name: {
       type: DataTypes.STRING,
@@ -32,11 +44,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     address: {
       type: DataTypes.TEXT,
-      allowNull: false
+      allowNull: true
     },
     phone_number: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true
     }
   }, {
     sequelize,

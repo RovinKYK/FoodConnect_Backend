@@ -11,12 +11,13 @@ router.post('/',
   authenticateToken,
   [
     body('food_type').notEmpty().withMessage('Food type is required'),
+    body('food_name').notEmpty().withMessage('Food name is required'),
     body('quantity_available').isFloat({ min: 0.01 }).withMessage('Quantity must be greater than 0'),
     body('quantity_unit').isIn(['count', 'grams']).withMessage('Quantity unit must be count or grams'),
     body('prepared_date').isISO8601().withMessage('Valid prepared date is required'),
     body('prepared_time').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid prepared time is required'),
     body('description').optional().isString(),
-    body('image_url').optional().isURL().withMessage('Valid image URL is required')
+    body('image_url').optional().isURL().withMessage('If provided, image URL must be valid')
   ],
   async (req, res) => {
     try {
@@ -30,6 +31,7 @@ router.post('/',
 
       const {
         food_type,
+        food_name,
         quantity_available,
         quantity_unit,
         prepared_date,
@@ -41,6 +43,7 @@ router.post('/',
       const foodItem = await FoodItem.create({
         donor_id: req.user.id,
         food_type,
+        food_name,
         quantity_available,
         quantity_unit,
         prepared_date,
@@ -73,9 +76,18 @@ router.get('/',
 
       // Build search conditions
       if (search) {
-        whereClause.food_type = {
-          [Op.iLike]: `%${search}%`
-        };
+        whereClause[Op.or] = [
+          {
+            food_type: {
+              [Op.iLike]: `%${search}%`
+            }
+          },
+          {
+            food_name: {
+              [Op.iLike]: `%${search}%`
+            }
+          }
+        ];
       }
 
       const includeClause = [
@@ -105,6 +117,21 @@ router.get('/',
   }
 );
 
+// GET /api/food/myfoods - Get food items donated by the authenticated user
+router.get('/myfoods', authenticateToken, async (req, res) => {
+  try {
+    const foodItems = await FoodItem.findAll({
+      where: { donor_id: req.user.id },
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({ food_items: foodItems });
+  } catch (error) {
+    console.error('Get my foods error:', error);
+    res.status(500).json({ error: 'Failed to get my foods' });
+  }
+});
+
 // GET /api/food/:id - Get details of a specific food item
 router.get('/:id', async (req, res) => {
   try {
@@ -131,32 +158,18 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// GET /api/food/myfoods - Get food items donated by the authenticated user
-router.get('/myfoods', authenticateToken, async (req, res) => {
-  try {
-    const foodItems = await FoodItem.findAll({
-      where: { donor_id: req.user.id },
-      order: [['created_at', 'DESC']]
-    });
-
-    res.json({ food_items: foodItems });
-  } catch (error) {
-    console.error('Get my foods error:', error);
-    res.status(500).json({ error: 'Failed to get my foods' });
-  }
-});
-
 // PUT /api/food/:id - Update an existing food item (only by donor)
 router.put('/:id',
   authenticateToken,
   [
     body('food_type').notEmpty().withMessage('Food type is required'),
+    body('food_name').notEmpty().withMessage('Food name is required'),
     body('quantity_available').isFloat({ min: 0.01 }).withMessage('Quantity must be greater than 0'),
     body('quantity_unit').isIn(['count', 'grams']).withMessage('Quantity unit must be count or grams'),
     body('prepared_date').isISO8601().withMessage('Valid prepared date is required'),
     body('prepared_time').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid prepared time is required'),
     body('description').optional().isString(),
-    body('image_url').optional().isURL().withMessage('Valid image URL is required')
+    body('image_url').optional().isURL().withMessage('If provided, image URL must be valid')
   ],
   async (req, res) => {
     try {
@@ -171,6 +184,7 @@ router.put('/:id',
       const { id } = req.params;
       const {
         food_type,
+        food_name,
         quantity_available,
         quantity_unit,
         prepared_date,
@@ -191,6 +205,7 @@ router.put('/:id',
 
       await foodItem.update({
         food_type,
+        food_name,
         quantity_available,
         quantity_unit,
         prepared_date,

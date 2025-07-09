@@ -28,6 +28,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
+    food_name: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
     quantity_available: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false
