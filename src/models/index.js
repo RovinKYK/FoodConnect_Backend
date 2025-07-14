@@ -7,8 +7,39 @@ const env = process.env.NODE_ENV || 'development';
 const config = configJson[env];
 const db = {};
 
+const getEnvOrConfig = (envVar, configKey) => process.env[envVar] || config[configKey];
+
 let sequelize;
-sequelize = new Sequelize(config.database, config.username, config.password, config);
+if (
+  process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_HOSTNAME &&
+  process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_PORT &&
+  process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_USERNAME &&
+  process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_PASSWORD &&
+  process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_DATABASENAME
+) {
+  // Use Choreo-provided environment variables
+  sequelize = new Sequelize(
+    process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_DATABASENAME,
+    process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_USERNAME,
+    process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_PASSWORD,
+    {
+      host: process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_HOSTNAME,
+      port: process.env.CHOREO_CONNECTION_BACKEND_DEFAULTDB_PORT,
+      dialect: 'postgres',
+      ssl: true,
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: true
+        }
+      },
+      logging: false
+    }
+  );
+} else {
+  // Fallback to config.json
+  sequelize = new Sequelize(config.database, config.username, config.password, config);
+}
 
 fs
   .readdirSync(__dirname)
