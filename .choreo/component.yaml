@@ -1,0 +1,12 @@
+schemaVersion: 1.2
+endpoints:
+  - name: foodconnect-backend
+    displayName: FoodConnect Backend API
+    service:
+      basePath: /api
+      port: 5001
+    type: REST
+    networkVisibilities:
+      - Public
+      - Organization
+    schemaFilePath: openapi.yaml 
