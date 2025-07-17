@@ -1,6 +1,6 @@
 schemaVersion: 1.2
 endpoints:
-  - name: foodconnect-backend
+  - name: foodconnect-backend-new
     displayName: FoodConnect Backend API
     service:
       basePath: /api
