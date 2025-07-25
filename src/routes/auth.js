@@ -4,7 +4,6 @@ const { User } = require('../models');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const config = require('../../config/config.json');
-const env = process.env.NODE_ENV || 'development';
 
 const router = express.Router();
 
@@ -39,7 +38,7 @@ router.post('/login', [
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      config[env].JWT_SECRET || 'your-secret-key',
+      config.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
@@ -103,7 +102,7 @@ router.post('/signup', [
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      config[env].JWT_SECRET || 'your-secret-key',
+      config.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
@@ -133,7 +132,7 @@ router.get('/user', async (req, res) => {
       return res.status(401).json({ error: 'Access token required' });
     }
 
-    const decoded = jwt.verify(token, config[env].JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, config.JWT_SECRET || 'your-secret-key');
     
     const user = await User.findByPk(decoded.userId);
 
