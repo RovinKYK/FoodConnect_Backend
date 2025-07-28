@@ -1,8 +1,12 @@
-apiVersion: core.choreo.dev/v1beta1
-kind: ComponentConfig
-metadata:
-  name: foodconnect-backend
-spec:
-  type: service
-  port: 5001
-  schemaFilePath: openapi.yaml
+schemaVersion: 1.2
+endpoints:
+  - name: foodconnect-backend
+    displayName: FoodConnect Backend API
+    service:
+      basePath: /
+      port: 5001
+    type: REST
+    networkVisibilities:
+      - Public
+      - Organization
+    schemaFilePath: openapi.yaml
