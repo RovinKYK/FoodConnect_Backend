@@ -2,22 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
 const basename = path.basename(__filename);
+const config = require('../../config/config.json');
 const db = {};
 
 let sequelize;
 
-// Use environment variables for configuration
-const dbConfig = {
-  username: process.env.DB_USER || 'postgres.jfogoythrhmiiukczkng',
-  password: process.env.DB_PASSWORD || '8D.aRZq9LAD6_Y!',
-  database: process.env.DB_NAME || 'postgres',
-  host: process.env.DB_HOST || 'aws-0-ap-southeast-1.pooler.supabase.com',
-  port: process.env.DB_PORT || 6543,
-  dialect: process.env.DB_DIALECT || 'postgres',
-  logging: false
-};
-
-sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.password, dbConfig);
+// Use to config.json
+sequelize = new Sequelize(config.db.database, config.db.username, config.db.password, config.db);
 
 
 fs

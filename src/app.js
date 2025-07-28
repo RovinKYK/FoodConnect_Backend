@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { sequelize } = require('./models');
+const config = require('../config/config.json');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -42,7 +43,7 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-const PORT = process.env.PORT || 5001;
+const PORT = config.PORT || 5001;
 
 // Database connection and server start
 const startServer = async () => {
